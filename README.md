@@ -1,58 +1,175 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Clean Architecture Example (Laravel 13)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This repository is a simple **Clean Architecture** demo built with Laravel.
+It shows how to keep business logic isolated from framework details by splitting code into clear layers:
 
-## About Laravel
+- **Domain**: core business rules and contracts
+- **Application**: use cases and DTOs (orchestration)
+- **Infrastructure**: persistence/repository implementations
+- **Interface Layer (HTTP)**: controllers, resources, and routes
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP `^8.3`
+- Laravel `^13`
+- Laravel Sanctum (token auth)
+- SQLite (default local database)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Project Structure
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```txt
+app/
+  Application/
+    DTOs/
+    UseCases/
+  Domain/
+    Enums/
+    Repositories/
+    Services/
+  Infrastructure/
+    Persistence/
+      Repositories/
+  Http/
+    Controllers/
+    Resources/
+  Shared/
+    Responses/
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Clean Architecture Flow
 
-## Contributing
+1. Request hits a controller in `app/Http/Controllers`.
+2. Controller maps request data into a DTO.
+3. Controller executes a use case from `app/Application/UseCases`.
+4. Use case depends on repository interfaces from `app/Domain/Repositories`.
+5. Laravel container binds interfaces to implementations in `app/Providers/AppServiceProvider.php`.
+6. Response is returned via `app/Shared/Responses/ApiResponse.php`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## API Endpoints
 
-## Code of Conduct
+Base URL (local): `http://127.0.0.1:8001`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Auth
 
-## Security Vulnerabilities
+- `POST /api/v1/register`
+- `POST /api/v1/login`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Orders (Sanctum protected)
 
-## License
+- `POST /api/v1/orders`
+- `GET /api/v1/orders`
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Example Requests
+
+### Register
+
+```bash
+curl -X POST http://127.0.0.1:8001/api/v1/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password123"
+  }'
+```
+
+### Login
+
+```bash
+curl -X POST http://127.0.0.1:8001/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "password123"
+  }'
+```
+
+### Create Order (Authenticated)
+
+```bash
+curl -X POST http://127.0.0.1:8001/api/v1/orders \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pickup_address": "Lekki Phase 1",
+    "delivery_address": "Yaba",
+    "distance": 12.5,
+    "weight": 2.3
+  }'
+```
+
+### List Orders (Authenticated)
+
+```bash
+curl -X GET http://127.0.0.1:8001/api/v1/orders \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+## Price Calculation
+
+Order pricing is handled in `app/Domain/Services/DeliveryPricingService.php`:
+
+- Base fee: `500`
+- Distance cost: `distance * 100`
+- Weight cost: `weight * 50`
+
+Formula:
+
+`price = 500 + (distance * 100) + (weight * 50)`
+
+## Getting Started
+
+### 1) Install dependencies
+
+```bash
+composer install
+npm install
+```
+
+### 2) Setup environment
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+### 3) Prepare database
+
+Using SQLite:
+
+```bash
+touch database/database.sqlite
+php artisan migrate
+```
+
+### 4) Run the app
+
+```bash
+php artisan serve --port=8001
+```
+
+Optional frontend assets:
+
+```bash
+npm run dev
+```
+
+## Useful Commands
+
+```bash
+php artisan route:list
+php artisan route:list --path=api/v1
+php artisan test
+composer dev
+```
+
+## Notes
+
+- API routes are loaded from `routes/api.php` via `bootstrap/app.php`.
+- Repositories are bound in `AppServiceProvider` using dependency inversion.
+- All API responses follow a consistent `status/message/data/errors` structure.
+
+## Purpose
+
+This project is intentionally small and educational.  
+Use it as a starter or reference for structuring Laravel applications with clean architecture principles.
